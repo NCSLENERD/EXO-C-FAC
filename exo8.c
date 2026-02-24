@@ -1,10 +1,11 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <stdio.h>
 
 int P4WIDTH;
 int P4HEIGHT;
-int PLAYERS;
+int P4PLAYERS;
 char *CHIP;
 char **board;
 
@@ -21,28 +22,28 @@ void DONE_SCREEN(void) {
 }
 
 void init_board(void) {
-    for (int r = 0; r < SIZE; r++)
-        for (int c = 0; c < SIZE; c++)  
+    for (int r = 0; r < P4HEIGHT; r++)
+        for (int c = 0; c < P4WIDTH; c++)  
             board[r][c] = ' ';
 }
 
 void draw_board(void) {
     move(0, 0);
-    for (int r = SIZE - 1; r >= 0; r--) {
+    for (int r = P4HEIGHT - 1; r >= 0; r--) {
         printw("   ");
-        for (int c = 0; c < SIZE; c++) {
+        for (int c = 0; c < P4WIDTH; c++) {
             printw("|%c", board[r][c]);
         }
         printw("|\n");
     }
 
     printw("   ");
-    for (int c = 0; c < SIZE; c++)
+    for (int c = 0; c < P4WIDTH; c++)
         printw("++");
     printw("+\n");
 
     printw("   ");
-    for (int c = 0; c < SIZE; c++)
+    for (int c = 0; c < P4WIDTH; c++)
         printw(" %c", 'A' + c);
     printw("\n");
 
@@ -62,17 +63,17 @@ int get_col(void) {
         if (isalpha(ch)) {
             ch = toupper(ch);
             int col = ch - 'A';
-            if (col >= 0 && col < SIZE)
+            if (col >= 0 && col < P4WIDTH)
                 return col;
         }
     }
 }
 
 int add_coin(int col, int player) {
-    for (int r = 0; r < SIZE; r++) {
+    for (int r = 0; r < P4HEIGHT; r++) {
         if (board[r][col] == ' ') {
             board[r][col] = CHIP[player];
-            return (player + 1) % PLAYERS;
+            return (player + 1) % P4PLAYERS;
         }
     }
     return player;
@@ -86,7 +87,7 @@ static int check_dir(int r, int c, int dr, int dc) {
         int nr = r + dr * k;
         int nc = c + dc * k;
 
-        if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE)
+        if (nr < 0 || nr >= P4HEIGHT || nc < 0 || nc >= P4WIDTH)
             return 0;
         if (board[nr][nc] != p)
             return 0;
@@ -97,8 +98,8 @@ static int check_dir(int r, int c, int dr, int dc) {
 int game_over(void) {
     int full = 1;
 
-    for (int r = 0; r < SIZE; r++) {
-        for (int c = 0; c < SIZE; c++) {
+    for (int r = 0; r < P4HEIGHT; r++) {
+        for (int c = 0; c < P4WIDTH; c++) {
 
             if (board[r][c] == ' ')
                 full = 0;
@@ -140,14 +141,50 @@ void play(void) {
     refresh();
 }
 
-int main(int argc[] , char *argv[]) {
+int main(int argc, char *argv[]) {
     
-    
-    char *val = getenv("SIZE");   // lire la variable d'environnement SIZE
-    SIZE = (val != NULL) ? atoi(val) : 16;
+    if (argc > 1 && (atoi(argv[1]) >= 4 && atoi(argv[1]) <= 26))
+	{
+		/*if (setenv("WIDTH", argv[1], 1) != 0)
+			perror("setenv error");
+		P4WIDTH = atoi(getenv("WIDTH"));*/
+		P4WIDTH = atoi(argv[1]);
+	}
+	else
+		P4WIDTH = 16;
+
+	if (argc > 2 && (atoi(argv[2]) >= 4 && atoi(argv[2]) <= 26))
+	{
+		/*if (setenv("HEIGHT", argv[2], 1) != 0)
+			perror("setenv error");
+		P4HEIGHT = atoi(getenv("HEIGHT"));*/
+		P4HEIGHT = atoi(argv[2]);
+	}
+	else
+		P4HEIGHT = 16;
+
+	if (argc > 3 && (atoi(argv[3]) >= 2 && atoi(argv[3]) <= 8))
+	{
+		/*if (setenv("PLAYERS", argv[3], 1) != 0)
+			perror("setenv error");
+		P4PLAYERS = atoi(getenv("PLAYERS"));*/
+		P4PLAYERS = atoi(argv[3]);
+	}
+	else
+		P4PLAYERS = 2;
+
+	board = malloc(P4HEIGHT * sizeof(char *));
+	for (int r = 0; r < P4HEIGHT; r++)
+    	board[r] = malloc(P4WIDTH * sizeof(char));
+
+	CHIP = "XO345678";
+
     INIT_SCREEN();
     init_board();
     play();
     getch();
+	for (int r = 0; r < P4HEIGHT; r++)
+    	free(board[r]);
+	free(board);
     DONE_SCREEN();
 }
