@@ -61,25 +61,14 @@ int main(void) {
             continue;
         }
 
-        /* type */
+        
         print_type(st.st_mode);
-
-        /* permissions */
         print_perms(st.st_mode);
-
-        /* nombre de liens */
         printf(" %lu", (unsigned long)st.st_nlink);
-
-        /* uid gid */
         printf(" %u %u", st.st_uid, st.st_gid);
-
-        /* taille */
         printf(" %lld", (long long)st.st_size);
-
-        /* nom */
         printf(" %s", ent->d_name);
 
-        /* lien symbolique */
         if (S_ISLNK(st.st_mode)) {
             ssize_t len = readlink(ent->d_name, linktarget, sizeof(linktarget) - 1);
             if (len != -1) {
