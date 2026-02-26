@@ -44,7 +44,7 @@ void print_perms(mode_t m) {
 }
 
 int main(void) {
-    DIR *dir = opendir("..");
+    DIR *dir = opendir(".");
     if (!dir) {
         perror("opendir");
         return 1;
