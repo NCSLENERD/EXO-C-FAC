@@ -3,43 +3,52 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+void printWorking(void);
+void continueFunct(int sig);
+void warning(int sig);
+void exitProg(int sig);
+
+int warned = 0;
+int paused = 0;
+
+
 void continueFunct(int sig)
 {
+	paused = 0;
+	warned = 0;
+	signal(SIGINT, warning);
     printf("The work will resume\n");
     sleep(1);
-    printWorking();
-    return;
 }
 
 void warning(int sig)
 {
-
     printf("Press again CTRL C within 2 seconds to kill the process\n");
-    signal(SIGALRM,continueFunct);
-    signal(SIGINT,exit);
-    alarm(2);
+	if(!warned)
+	{
+		paused = 1;
+		warned = 1;
+		signal(SIGINT, exitProg);
+		signal(SIGALRM,continueFunct);
+    	alarm(2);
+	}
 }
 
-void exit(int sig)
+void exitProg(int sig)
 {
     alarm(0);
     printf("GoodBye\n");
-    sleep(1);
     exit(0);
 }
 
-void printWorking()
+int main(void)
 {
-    while(1)
+    signal(SIGINT, warning);
+
+    while (1)
     {
-        if(signal(SIGINT,warning))
-            break;
-        printf("working...\n");
+		if(!paused)
+        	printf("working...\n");
         sleep(1);
     }
-}
-
-int main()
-{
-    printWorking();
 }
