@@ -31,7 +31,6 @@ void bruteforce(int first, int step, int zero, int pipe_fd)
             
         if(zeros(hex, zero))
         {
-            // Écrire le nonce dans le pipe
             write(pipe_fd, buf, strlen(buf) + 1);
         }
         first = first + step;
@@ -44,7 +43,6 @@ int main(void)
     int pipes[10][2];
     struct pollfd fds[10];
     
-    // Créer les pipes et les processus enfants
     for (int i = 0; i < 10; i++) {
         if (pipe(pipes[i]) == -1) {
             perror("pipe");
@@ -53,35 +51,30 @@ int main(void)
         
         pids[i] = fork();
         if (pids[i] == 0) {
-            // Enfant : fermer le côté lecture et faire le bruteforce
             close(pipes[i][0]);
             bruteforce(i + 1, 10, 6, pipes[i][1]);
             close(pipes[i][1]);
             return 0;
         }
         
-        // Parent : fermer le côté écriture
         close(pipes[i][1]);
         
-        // Configurer pollfd pour ce pipe
         fds[i].fd = pipes[i][0];
         fds[i].events = POLLIN;
     }
     
-    // Lire les 5 premiers nonces
     int count = 0;
     char buf[32];
     
     
     while (count < 5) {
-        int ret = poll(fds, 10, -1);  // Attendre indéfiniment
+        int ret = poll(fds, 10, -1); 
         
         if (ret == -1) {
             perror("poll");
             break;
         }
         
-        // Vérifier quel pipe a des données
         for (int i = 0; i < 10; i++) {
             if (fds[i].revents & POLLIN) {
                 ssize_t n = read(fds[i].fd, buf, sizeof(buf));
