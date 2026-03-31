@@ -72,7 +72,6 @@ int main(void)
     int count = 0;
     char buf[32];
     
-    printf("Attente des 5 premiers nonces...\n");
     
     while (count < 5) {
         int ret = poll(fds, 10, -1);  // Attendre indéfiniment
@@ -98,17 +97,12 @@ int main(void)
         }
     }
     
-    // Arrêter tous les enfants
-    printf("\n5 nonces trouvés, arrêt de tous les processus enfants...\n");
     for (int i = 0; i < 10; i++) {
         kill(pids[i], SIGKILL);
         close(pipes[i][0]);
     }
-    
-    // Attendre que tous les enfants se terminent
+
     while (wait(NULL) > 0)
         continue;
-    
-    printf("Parent : terminé\n");
     return 0;
 }
