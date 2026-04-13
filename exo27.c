@@ -16,7 +16,10 @@ int nb_trouves = 0;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Flag pour dire aux threads d'arreter
-int fini = 0;
+// volatile = force le compilateur a relire la variable en memoire
+// a chaque fois, sinon il pourrait la garder dans un registre
+// et un thread ne verrait jamais que fini a change
+volatile int fini = 0;
 
 int zeros(char *s, int n)
 {
