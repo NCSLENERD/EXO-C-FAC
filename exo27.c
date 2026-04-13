@@ -1,25 +1,24 @@
-// Exercice 27 - md5-threads : refaire l'exo 20 avec des threads POSIX
-// et un tableau partage pour stocker les nonces trouves
-// ldd: -lcrypto -lpthread
-
 #include <stdio.h>
 #include <openssl/md5.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <unistd.h>
 
-// Tableau partage pour stocker les 5 premiers nonces
-int nonces[5];
-int nb_trouves = 0;
+#define NB_THREADS 10
+#define MAX_NONCES 5
+#define NB_ZEROS   6
 
-// Mutex pour proteger l'acces au tableau
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Flag pour dire aux threads d'arreter
-// volatile = force le compilateur a relire la variable en memoire
-// a chaque fois, sinon il pourrait la garder dans un registre
-// et un thread ne verrait jamais que fini a change
-volatile int fini = 0;
+typedef struct {
+    int first;
+    int step;
+    int zero;
+} thread_args_t;
+
+char nonces[MAX_NONCES][32];
+volatile int count = 0;
 
 int zeros(char *s, int n)
 {
@@ -29,75 +28,54 @@ int zeros(char *s, int n)
     return (i == n);
 }
 
-// Structure pour passer les parametres au thread (comme les params de bruteforce dans exo20)
-typedef struct {
-    int first;
-    int step;
-    int zero;
-} thread_args;
-
-// Version thread de bruteforce (adaptee de exo20)
 void *bruteforce(void *arg)
 {
-    thread_args *args = (thread_args *)arg;
+	thread_args_t *a = (thread_args_t *)arg;
+	int first = a->first;
+    int zero  = a->zero;
+	int step = a->step;
+
     unsigned char hash[50];
     char hex[33];
     char buf[32];
-
-    int current = args->first;
-
-    while (!fini)
+    
+    while(count < 5)
     {
-        int size = sprintf(buf, "%d", current);
+        int size = sprintf(buf, "%d", first);
         MD5((unsigned char*)buf, size, hash);
 
         for (int i = 0; i < 16; i++)
             sprintf(hex + i*2, "%02x", hash[i]);
-
-        if(zeros(hex, args->zero))
+            
+        if(zeros(hex, a->zero))
         {
-            // Au lieu d'ecrire dans un fichier comme exo20,
-            // on ecrit dans le tableau partage (protege par mutex)
             pthread_mutex_lock(&mutex);
-            if (nb_trouves < 5) {
-                nonces[nb_trouves] = current;
-                printf("Nonce %d trouve par thread %d : %s\n",
-                       nb_trouves + 1, args->first, buf);
-                nb_trouves++;
-
-                if (nb_trouves >= 5)
-                    fini = 1;
-            }
-            pthread_mutex_unlock(&mutex);
+        	strcpy(nonces[count], buf);
+        	count++; 
+			printf("trouvé ! count = %d\n", count);
+			pthread_mutex_unlock(&mutex);
         }
-        current = current + args->step;
+        first += step;
     }
-
-    return NULL;
+	return NULL;
 }
-
 int main(void)
 {
-    pthread_t threads[10];
-    thread_args args[10];
-
-    // Creer les 10 threads (comme les 10 enfants dans exo20)
+    pthread_t tids[10];
+	thread_args_t args[10];
+    
     for (int i = 0; i < 10; i++) {
-        args[i].first = i + 1;
-        args[i].step = 10;
-        args[i].zero = 6;
-
-        pthread_create(&threads[i], NULL, bruteforce, &args[i]);
+		args[i].first = i + 1;
+    	args[i].zero = 6;
+		args[i].step = 10;
+        if (pthread_create(&tids[i], NULL, bruteforce, &args[i]) != 0) {
+            perror("thread create failed");
+            exit(1);
+        }
     }
-
-    // Attendre tous les threads (comme wait dans exo20)
     for (int i = 0; i < 10; i++)
-        pthread_join(threads[i], NULL);
-
-    // Afficher les 5 nonces trouves
-    printf("\nNonces trouves :\n");
-    for (int i = 0; i < nb_trouves; i++)
-        printf("  %d\n", nonces[i]);
-
+		pthread_join(tids[i], NULL);
+	for (int i = 0; i < 5; i++)
+    	printf("Nonce %d : %s\n", i + 1, nonces[i]);
     return 0;
-}
+}	
