@@ -46,13 +46,26 @@ void *thread_sort(void *arg)
     while(1)
     {
         mq_receive(mq, (char*)&task, sizeof(task_t), NULL);
-        Tab sub = slice(tableau, task.first, task.last);
-        uint p = partition(sub);
 
-        task_t gauche = {task.first, task.first + p};
-        task_t droit  = {task.first + p + 1, task.last};
-        handle_subrange(gauche);
-        handle_subrange(droit);
+        while (task.first < task.last) {
+            Tab sub = slice(tableau, task.first, task.last);
+            uint p = partition(sub);
+
+            task_t gauche = {task.first, task.first + p};
+            task_t droit  = {task.first + p + 1, task.last};
+
+            uint len_g = (gauche.first <= gauche.last) ? gauche.last - gauche.first + 1 : 0;
+            uint len_d = (droit.first  <= droit.last)  ? droit.last  - droit.first  + 1 : 0;
+
+            if (len_g >= len_d) {
+                handle_subrange(droit);
+                task = gauche;
+            } else {
+                handle_subrange(gauche);
+                task = droit;
+            }
+        }
+        handle_subrange(task);
     }
     return NULL;
 }
